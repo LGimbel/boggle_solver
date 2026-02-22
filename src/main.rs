@@ -24,6 +24,7 @@ struct BoggleSolver {
     board: Vec<Vec<char>>,
     rows: i32,
     cols: i32,
+
 }
 
 impl BoggleSolver {
@@ -58,9 +59,9 @@ impl BoggleSolver {
         let count = found_words.len();
         let mut sorted_words: Vec<String> = found_words.into_iter().collect();
         sorted_words.sort_by(|a, b| b.len().cmp(&a.len()).then(a.cmp(b)));
-        let longest_6 = sorted_words.into_iter().take(6).collect();
+        let longest_x = sorted_words.into_iter().take(10).collect();
 
-        (count, longest_6)
+        (count, longest_x)
     }
 
     fn dfs(
