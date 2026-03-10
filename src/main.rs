@@ -21,14 +21,13 @@ impl TrieNode {
 
 struct BoggleSolver {
     trie: TrieNode,
-    board: Vec<Vec<char>>,
+    board: Vec<Vec<String>>,  // Each tile can be multiple chars (e.g., "QU")
     rows: i32,
     cols: i32,
-
 }
 
 impl BoggleSolver {
-    fn new(board: Vec<Vec<char>>, dict_path: &str) -> std::io::Result<Self> {
+    fn new(board: Vec<Vec<String>>, dict_path: &str) -> std::io::Result<Self> {
         let mut trie = TrieNode::default();
         let file = File::open(dict_path)?;
         let reader = BufReader::new(file);
@@ -77,25 +76,34 @@ impl BoggleSolver {
             return;
         }
 
-        let ch = self.board[r as usize][c as usize];
-        if let Some(next_node) = node.children.get(&ch) {
-            visited[r as usize][c as usize] = true;
-            path.push(ch);
-
-            if next_node.is_word {
-                found.insert(path.clone());
+        let tile = &self.board[r as usize][c as usize];
+        
+        // Traverse through all characters in the tile (handles "QU" as single tile)
+        let mut current_node = node;
+        for ch in tile.chars() {
+            if let Some(next) = current_node.children.get(&ch) {
+                current_node = next;
+            } else {
+                return; // No matching path in trie
             }
+        }
 
-            for dr in -1..=1 {
-                for dc in -1..=1 {
-                    if dr != 0 || dc != 0 {
-                        self.dfs(r + dr, c + dc, next_node, path.clone(), visited, found);
-                    }
+        visited[r as usize][c as usize] = true;
+        path.push_str(tile);
+
+        if current_node.is_word {
+            found.insert(path.clone());
+        }
+
+        for dr in -1..=1 {
+            for dc in -1..=1 {
+                if dr != 0 || dc != 0 {
+                    self.dfs(r + dr, c + dc, current_node, path.clone(), visited, found);
                 }
             }
-
-            visited[r as usize][c as usize] = false;
         }
+
+        visited[r as usize][c as usize] = false;
     }
 }
 
@@ -106,19 +114,34 @@ fn main() {
     if args.len() != 5 {
         eprintln!("Usage: cargo run -- <row1> <row2> <row3> <row4>");
         eprintln!("Example: cargo run -- srps euim eahw wdzr");
+        eprintln!("Note: 'qu' is treated as a single tile (the Qu tile)");
         return;
     }
 
     let mut board = Vec::new();
     for i in 1..5 {
-        let row_str = &args[i];
-        if row_str.len() != 4 {
-            eprintln!("Error: Each argument must be exactly 4 letters long.");
+        let row_str = args[i].to_uppercase();
+        
+        // Parse tiles: "QU" is one tile, other letters are individual tiles
+        let mut tiles: Vec<String> = Vec::new();
+        let chars: Vec<char> = row_str.chars().collect();
+        let mut j = 0;
+        while j < chars.len() {
+            if chars[j] == 'Q' && j + 1 < chars.len() && chars[j + 1] == 'U' {
+                tiles.push("QU".to_string());
+                j += 2;
+            } else {
+                tiles.push(chars[j].to_string());
+                j += 1;
+            }
+        }
+        
+        if tiles.len() != 4 {
+            eprintln!("Error: Each argument must represent exactly 4 tiles (got {}).", tiles.len());
+            eprintln!("Remember: 'qu' counts as one tile.");
             return;
         }
-        // Convert to uppercase characters for matching the Trie
-        let row_chars: Vec<char> = row_str.to_uppercase().chars().collect();
-        board.push(row_chars);
+        board.push(tiles);
     }
 
     match BoggleSolver::new(board, "words.txt") {
