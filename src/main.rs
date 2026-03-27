@@ -108,7 +108,6 @@ impl BoggleSolver {
 }
 
 fn main() {
-    // env::args() includes the executable path at index 0
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 5 {
